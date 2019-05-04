@@ -109,8 +109,9 @@ Axes are numbered 0 for X, 1 for Y and 2 for Z, and the transpose tuple is
 `(x, y, z)`. Hence `(0, 1, 2)` implies no transformation. Passing `(1, 0, 2)`
 implies a rotation around the Z axis.
 
-Sign values must be 0 (normal) or 1 (inverted). Hence a board mounted upside
-down would have `sign=(0, 0, 1)` (Z axis inverted).
+Sign values must be 0 (normal) or 1 (inverted). Hence a board rotated around
+the Y axis and mounted upside down would have `sign=(1, 0, 1)` (X and Z axes
+inverted).
 
 The constructor blocks for 700ms (1.2s if `crystal==True`).
 
@@ -292,7 +293,7 @@ has found magnetic north and orientation values become absolute.
 
 Though the sensor fusion software runs the calibration algorithm of all the
 three sensors (accelerometer, gyroscope and magnetometer) in the background to
-remove the offsets, some preliminary steps had to be ensured for this automatic
+remove the offsets, some preliminary steps should be ensured for this automatic
 calibration to take place.
 
 The accelerometer and the gyroscope are relatively less susceptible to external
