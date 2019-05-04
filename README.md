@@ -94,8 +94,9 @@ This takes the following args
  * `i2c` An initialised I2C instance.
  * `address=0x28` Default device address. The Adafruit breakout allows this to
  be changed to 0x29 for the case where two devices are attached to one bus.
- * `crystal=True` Use an external crystal for higher accuracy if one is
- provided. The Adafruit board has a crystal.
+ * `crystal=True`  If `True` use an external crystal for higher accuracy; the
+ Adafruit board has a crystal. If the hardware does not have a crystal this
+ should be `False`: the chip's internal oscillator will be used.
 
 The following optional args provide for vehicle relative coordinates. The
 default values assume that the IMU is mounted component side up and in the
@@ -111,7 +112,7 @@ implies a rotation around the Z axis.
 Sign values must be 0 (normal) or 1 (inverted). Hence a board mounted upside
 down would have `sign=(0, 0, 1)` (Z axis inverted).
 
-The constructor blocks for 700ms.
+The constructor blocks for 700ms (1.2s if `crystal==True`).
 
 ## 3.2 Read only methods
 
@@ -185,7 +186,7 @@ and the range of the accelerometer and gyro. In fusion modes rates are fixed:
 the only available change is to the accelerometer range.
 
 | Device | Full scale  | Update rate |
-|:------:|:-----------:|:-----------:| Datasheet table 3.14
+|:------:|:-----------:|:-----------:|
 | Accel  | +-4G        | 100Hz       |
 | Gyro   | 2000°/s     | 100Hz       |
 | Mag    | -           | 20Hz        |
@@ -197,7 +198,8 @@ In non-fusion modes the sensors may be controlled with the following method.
  * `config(dev, value=None)` `dev` is the device: must be `ACC`, `GYRO` or
  `MAG` (constants defined in bno055_help.py). The `value` arg may be an integer
  holding the raw value for the configuration register or a tuple. The tuple
- contains human readable values which are converted to a register value.
+ contains human readable values which are converted to a register value. See
+ below for details specific to each sensor.
 
 The default value of `None` causes no change to be made. In each case the
 method returns the raw register value as it was before any change was made:
@@ -251,7 +253,7 @@ means of the `iget` method and `w`, `x`, `y`, and `z` bound variables. The ISR
 calls `iget` with the name of the value to be accessed. On return the bound
 variables are updated with the raw data from the device. Each value is a signed
 integer and requires scaling to be converted to standard units of measurement.
-The variable names are in `bno055_help.py`.
+The symbolic variable names are provided in `bno055_help.py`.
 
 |  Name        | Scaling     | Units    |
 |:------------:|:-----------:|:--------:|
@@ -343,6 +345,6 @@ NDOF:
 
 # 5. References
 
-[Adafruit BNO055 breakout](https://www.adafruit.com/product/2472)
-[Adafruit CircuitPython driver](https://github.com/adafruit/Adafruit_CircuitPython_BNO055.git).
+[Adafruit BNO055 breakout](https://www.adafruit.com/product/2472)  
+[Adafruit CircuitPython driver](https://github.com/adafruit/Adafruit_CircuitPython_BNO055.git).  
 [Device datasheet](https://cdn-learn.adafruit.com/assets/assets/000/036/832/original/BST_BNO055_DS000_14.pdf)
