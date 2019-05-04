@@ -16,9 +16,17 @@ M4G_MODE = 0x0a
 NDOF_FMC_OFF_MODE = 0x0b
 NDOF_MODE = 0x0c
 
-ACC = 0x08  # Registers for configuration
+ACC = 0x08  # Registers for configuration (page 1)
 MAG = 0x09
 GYRO = 0x0a
+
+ACC_DATA = 0x08  # Data regsiters (page 0)
+MAG_DATA = 0x0e
+GYRO_DATA = 0x14
+GRAV_DATA = 0x2e
+LIN_ACC_DATA = 0x28
+EULER_DATA = 0x1a
+QUAT_DATA = 0x20
 
 _acc_range = (2, 4, 8, 16)  # G
 _acc_bw = (8, 16, 31, 62, 125, 250, 500, 1000)

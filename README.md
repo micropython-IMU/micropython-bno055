@@ -1,15 +1,16 @@
 # micropython-bno055
 
 A MicroPython driver for the Bosch BNO055 inertial measurement unit (IMU). This
-chip has the advantage of performing sensor fusion in hardware. The driver was
-ported from the [Adafruit CircuitPython driver](https://github.com/adafruit/Adafruit_CircuitPython_BNO055.git).
+chip has the advantage of performing sensor fusion in hardware. The driver is
+based on the [Adafruit CircuitPython driver](https://github.com/adafruit/Adafruit_CircuitPython_BNO055.git).
 
 This driver has the following objectives:
- * Runs under official MicroPython.
+ * It runs under official MicroPython.
  * Cross-platform: designed to run on Pyboard 1.x, Pyboard D, ESPx. Should run
  on any hardware which supports the `machine` module and the I2C interface.
- * Supports additional functionality compare to the Adafruit driver, notably
- vehicle-relative coordinate transformation.
+ * Supports vehicle-relative coordinate transformation.
+ * Supports changing the hardware configuration.
+ * Supports access in interrupt service routines.
  * Uses the MicroPython approach to coding.
 
 Testing was done with the [Adafruit BNO055 breakout](https://www.adafruit.com/product/2472).
@@ -24,7 +25,9 @@ Testing was done with the [Adafruit BNO055 breakout](https://www.adafruit.com/pr
   3.3 [Changing the device configuration](./README.md#33-changing-the-device-configuration)  
    3.3.1 [Mode setting](./README.md#331-mode-setting) Modify device operating mode.  
    3.3.2 [Rate and range control](./README.md#332-rate-and-range-control) Further settings.  
+  3.4 [Use in interrupt handlers](./README.md#34-use-in-interrupt-handlers)  
  4. [Calibration](./README.md#4-calibration)  
+ 5. [References](./README.md#5-references)  
 
 # 1. Files and dependencies
 
@@ -33,7 +36,7 @@ Testing was done with the [Adafruit BNO055 breakout](https://www.adafruit.com/pr
  * `bno055_test.py` Simple test program.
 
 The driver has no dependencies, but will use the helper module if present. The
-helper module provides functions and values for users wishing to change the
+helper module provides functions and constants for users wishing to change the
 configuration or operating mode of the hardware. The use of a separate module
 minimises code size for those using the default `NDOF` mode. To access the
 functions and values of the helper module it is recommended to issue
@@ -63,7 +66,8 @@ import time
 from bno055 import BNO055
 
 i2c = machine.I2C(1)
-imu = BNO055(i2c)
+imu = BNO055(i2c)  # For hardware with a crystal (e.g. Adafruit)
+# imu =BNO055(i2c, crystal=False)
 while True:
     time.sleep(1)
     if not imu.calibrated():
@@ -76,12 +80,8 @@ while True:
     print('Gravity   x {:5.1f}    y {:5.1f}     z {:5.1f}'.format(*imu.gravity()))
     print('Heading     {:4.0f} roll {:4.0f} pitch {:4.0f}'.format(*imu.euler()))
 ```
-
 To calibrate the chip move the unit as per [section 4](./README.md#4-calibration)
 until all calibration values are 3.
-
-If problems occur with a board other than the Adafruit one, try setting the
-`crystal` constructor arg `False`.
 
 ###### [Contents](./README.md#contents)
 
@@ -115,20 +115,21 @@ The constructor blocks for 700ms.
 
 ## 3.2 Read only methods
 
- * `mag()` Returns magnetometer vector `(x, y, z)` in microtesla.
- * `accel()` Returns accelerometer `(x, y, z)` in m.s^-2
- * `lin_acc()` Returns acceleration `(x, y, z)` in m.s^-2 after removal of
- gravity component.
- * `gravity()` Returns gravity vector `(x, y, z)` in m.s^-2 after removal of
+Return values:
+ * `mag()` Magnetometer vector `(x, y, z)` in μT (microtesla).
+ * `accel()` Accelerometer vector `(x, y, z)` in m.s^-2
+ * `lin_acc()` Acceleration `(x, y, z)` after removal of gravity component
+ (m.s^-2).
+ * `gravity()` Gravity vector `(x, y, z)` in m.s^-2 after removal of
  acceleration data.
- * `gyro()` Returns gyro vector `(x, y, z)` in deg.s^-1.
- * `euler()` Returns Euler angles in degrees `(heading, roll, pitch)`.
- * `quaternion()` Returns quaternion `(w, x, y, z)`.
- * `temperature()` Returns temperature in degrees Celcius as an integer.
- * `calibrated()` Returns `True` if all elements of the device are calibrated.
+ * `gyro()` Gyro vector `(x, y, z)` in deg.s^-1.
+ * `euler()` Euler angles in degrees `(heading, roll, pitch)`.
+ * `quaternion()` Quaternion `(w, x, y, z)`.
+ * `temperature()` Chip temperature as an integer °C (Celcius).
+ * `calibrated()` `True` if all elements of the device are calibrated.
  * `calibration_status()` Returns `(sys, gyro, accel, mag)`. Each element has a
  value of from 0 (uncalibrated) to 3 (fully calibrated).
- * `external_crystal()` Returns `True` if using an external crystal.
+ * `external_crystal()` `True` if using an external crystal.
 
 ## 3.3 Changing the device configuration
 
@@ -184,9 +185,9 @@ and the range of the accelerometer and gyro. In fusion modes rates are fixed:
 the only available change is to the accelerometer range.
 
 | Device | Full scale  | Update rate |
-|:------:|:-----------:|:-----------:|  TODO Is this right???
-| Accel  | +-4G        | 62.5Hz      |
-| Gyro   | 2000°/s     | 32Hz        |
+|:------:|:-----------:|:-----------:| Datasheet table 3.14
+| Accel  | +-4G        | 100Hz       |
+| Gyro   | 2000°/s     | 100Hz       |
 | Mag    | -           | 20Hz        |
 
 The magnetometer has a single range: units are Micro Tesla (μT).
@@ -242,6 +243,37 @@ Allowable values:
 Rate: 2, 6, 8, 10, 15, 20, 25, 30 (Hz)  
 The return value may be restored to human-readable form by means of the
 `get_tuple(MAG, value)` function.
+
+## 3.4 Use in interrupt handlers
+
+The `BNO055` class supports access in interrupt service routines (ISR's) by
+means of the `iget` method and `w`, `x`, `y`, and `z` bound variables. The ISR
+calls `iget` with the name of the value to be accessed. On return the bound
+variables are updated with the raw data from the device. Each value is a signed
+integer and requires scaling to be converted to standard units of measurement.
+The variable names are in `bno055_help.py`.
+
+|  Name        | Scaling     | Units    |
+|:------------:|:-----------:|:--------:|
+| ACC_DATA     | 1/100       | m.s^-2   |
+| MAG_DATA     | 1/16        | μT       |
+| GYRO_DATA    | 1/16        | °.s^-1   |
+| GRAV_DATA    | 1/100       | m.s^-2   |
+| LIN_ACC_DATA | 1/100       | m.s^-2   |
+| EULER_DATA   | 1/16        | °        |
+| QUAT_DATA    | 1/(1 << 14) | unitless |
+
+In each case the integer values must be multiplied by the scaling to give the
+units specified. In all cases other than quaternion (`QUAT_DATA`) the `iget`
+method sets `.w` to zero. Example usage:
+
+```python
+def cb(t):
+    imu.iget(ACC_DATA)
+    print(imu.w, imu.x, imu.y, imu.z)
+
+t = pyb.Timer(1, period=200, callback=cb)
+```
 
 ###### [Contents](./README.md#contents)
 
@@ -308,3 +340,9 @@ NDOF:
  of the magnetometer.
 
 ###### [Contents](./README.md#contents)
+
+# 5. References
+
+[Adafruit BNO055 breakout](https://www.adafruit.com/product/2472)
+[Adafruit CircuitPython driver](https://github.com/adafruit/Adafruit_CircuitPython_BNO055.git).
+[Device datasheet](https://cdn-learn.adafruit.com/assets/assets/000/036/832/original/BST_BNO055_DS000_14.pdf)

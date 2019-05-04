@@ -56,10 +56,10 @@ _AXIS_MAP_SIGN = const(0x42)
 _AXIS_MAP_CONFIG = const(0x41)
 
 # Convert two bytes to signed integer (little endian) Can be used in an interrupt handler
-#def bytes_toint(lsb, msb):
-    #if not msb & 0x80:
-        #return msb << 8 | lsb  # +ve
-    #return - (((msb ^ 255) << 8) | (lsb ^ 255) + 1)
+def bytes_toint(lsb, msb):
+    if not msb & 0x80:
+        return msb << 8 | lsb  # +ve
+    return - (((msb ^ 255) << 8) | (lsb ^ 255) + 1)
 
 # Transposition (x, y, z) 0 == x 1 == y 2 == z hence (0, 1, 2) is no change
 # Scaling (x, y, z) 0 == normal 1 == invert
@@ -74,6 +74,10 @@ class BNO055:
             raise ValueError('Transpose indices must be unique and in range 0-2')
         self.buf6 = bytearray(6)
         self.buf8 = bytearray(8)
+        self.w = 0
+        self.x = 0
+        self.y = 0
+        self.z = 0
         chip_id = self._read(_ID_REGISTER)
         if chip_id != _CHIP_ID:
             raise RuntimeError("bad chip id (%x != %x)" % (chip_id, _CHIP_ID))
@@ -176,3 +180,22 @@ class BNO055:
         self._write(_PAGE_REGISTER, 0)
         self.mode(last_mode)
         return old_val
+
+    def iget(self, reg):
+        if reg == 0x20:
+            n = 4
+            buf = self.buf8
+        else:
+            n = 3
+            buf = self.buf6
+#        self._readn(buf, reg)
+        self._i2c.readfrom_mem_into(self.address, reg, buf)
+        if n == 4:
+            self.w = bytes_toint(buf[0], buf[1])
+            i = 2
+        else:
+            self.w = 0
+            i = 0
+        self.x = bytes_toint(buf[i], buf[i+1])
+        self.y = bytes_toint(buf[i+2], buf[i+3])
+        self.z = bytes_toint(buf[i+4], buf[i+5])
