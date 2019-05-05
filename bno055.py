@@ -78,7 +78,10 @@ class BNO055:
         self.x = 0
         self.y = 0
         self.z = 0
-        chip_id = self._read(_ID_REGISTER)
+        try:
+            chip_id = self._read(_ID_REGISTER)
+        except OSError:
+            raise RuntimeError('No BNO055 chip detected.')
         if chip_id != _CHIP_ID:
             raise RuntimeError("bad chip id (%x != %x)" % (chip_id, _CHIP_ID))
         self.reset()  # Blocks 700ms

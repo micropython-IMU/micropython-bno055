@@ -8,12 +8,17 @@ This driver has the following objectives:
  * It runs under official MicroPython.
  * Cross-platform: designed to run on Pyboard 1.x, Pyboard D, ESPx. Should run
  on any hardware which supports the `machine` module and the I2C interface.
+ * Small memory footprint for ESP8266 (~11KB).
  * Supports vehicle-relative coordinate transformation.
  * Supports changing the hardware configuration.
  * Supports access in interrupt service routines.
- * Uses the MicroPython approach to coding.
+ * Uses the MicroPython approach to coding (avoids properties/descriptors).
 
 Testing was done with the [Adafruit BNO055 breakout](https://www.adafruit.com/product/2472).
+This chip and breakout come highly recommended. Calibration requires effort,
+but once done the magnetometer is remarkably immune to external magnetic
+fields. A field which displaced my hiker's compass by 90° caused at most 2° of
+heading change on this device.
 
 # Contents
 
@@ -33,7 +38,8 @@ Testing was done with the [Adafruit BNO055 breakout](https://www.adafruit.com/pr
 
  * `bno055.py` Device driver.
  * `bno055_help.py` Optional helper module.
- * `bno055_test.py` Simple test program.
+ * `bno055_test.py` Simple test program. Can run on Pyboard or (with pin
+ changes) ESP8266: see code comments.
 
 The driver has no dependencies, but will use the helper module if present. The
 helper module provides functions and constants for users wishing to change the
@@ -58,6 +64,12 @@ The wiring below is for I2C(1) as used in the test program.
 | SCL X9  | SCL    |
 | SDA X10 | SDA    |
 
+Note that pullups (typically 10KΩ to 3.3V) are required on SCL and SDA. The
+Pyboard has these on `I2C(1)` and `I2C(2)`, as does the Adafruit BNO055
+breakout. ESP8266 boards have pullups on pins 0 and 2. External pullups will
+therefore only be required if using a non-Adafruit breakout with MicroPython
+board pins lacking pullups.
+
 Basic usage is as follows:
 
 ```python
@@ -65,7 +77,7 @@ import machine
 import time
 from bno055 import BNO055
 
-i2c = machine.I2C(1)
+i2c = machine.I2C(1)  # Pyboard hardware I2C: adapt for other targets
 imu = BNO055(i2c)  # For hardware with a crystal (e.g. Adafruit)
 # imu =BNO055(i2c, crystal=False)
 while True:
