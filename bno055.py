@@ -27,6 +27,7 @@
 # modified/enhanced functionality.
 
 # Original Author: Radomir Dopieralski
+# Ported to MicroPython and extended by Peter Hinch
 # This port copyright (c) Peter Hinch 2019
 
 import utime as time
@@ -68,36 +69,19 @@ class BNO055:
     def __init__(self, i2c, address=0x28, crystal=True, transpose=(0, 1, 2), sign=(0, 0, 0)):
         self._i2c = i2c
         self.address = address
-        self.argcheck(transpose, "Transpose")
-        self.argcheck(sign, "Sign")
+        self.crystal = crystal
+        self.argcheck(sign, 'Sign')
+        self.sign = sign
+        self.argcheck(transpose, 'Transpose')
         if set(transpose) != {0, 1, 2}:
             raise ValueError('Transpose indices must be unique and in range 0-2')
+        self.transpose = transpose
         self.buf6 = bytearray(6)
         self.buf8 = bytearray(8)
         self.w = 0
         self.x = 0
         self.y = 0
         self.z = 0
-        try:
-            chip_id = self._read(_ID_REGISTER)
-        except OSError:
-            raise RuntimeError('No BNO055 chip detected.')
-        if chip_id != _CHIP_ID:
-            raise RuntimeError("bad chip id (%x != %x)" % (chip_id, _CHIP_ID))
-        self.reset()  # Blocks 700ms
-        self._write(_POWER_REGISTER, _POWER_NORMAL)
-        self._write(_PAGE_REGISTER, 0x00)
-        self._write(_TRIGGER_REGISTER, 0x80 if crystal else 0)
-        time.sleep_ms(500 if crystal else 10)
-
-        if transpose != (0, 1, 2):
-            a = transpose
-            self._write(_AXIS_MAP_CONFIG, (a[2] << 4) + (a[1] << 2) + a[0])
-        if sign != (0, 0, 0):
-            a = sign
-            self._write(_AXIS_MAP_SIGN, a[2] + (a[1] << 1) + (a[0] << 2))
-        self.mode(_NDOF_MODE)
-        time.sleep_ms(10)
         self.mag = lambda : self.scaled_tuple(0x0e, '<hhh', self.buf6, 1/16)  # microteslas (x, y, z)
         self.accel = lambda : self.scaled_tuple(0x08, '<hhh', self.buf6, 1/100)  # m.s^-2
         self.lin_acc = lambda : self.scaled_tuple(0x28, '<hhh', self.buf6, 1/100)  # m.s^-2
@@ -105,6 +89,34 @@ class BNO055:
         self.gyro = lambda : self.scaled_tuple(0x14, '<hhh', self.buf6, 1/16)  # deg.s^-1
         self.euler = lambda : self.scaled_tuple(0x1a, '<hhh', self.buf6, 1/16)  # degrees (heading, roll, pitch)
         self.quaternion = lambda : self.scaled_tuple(0x20, '<hhhh', self.buf8, 1/(1<<14))  # (w, x, y, z)
+        try:
+            chip_id = self._read(_ID_REGISTER)
+        except OSError:
+            raise RuntimeError('No BNO055 chip detected.')
+        if chip_id != _CHIP_ID:
+            raise RuntimeError("bad chip id (%x != %x)" % (chip_id, _CHIP_ID))
+        self.reset()
+
+    def reset(self):
+        self.mode(_CONFIG_MODE)
+        try:
+            self._write(_TRIGGER_REGISTER, 0x20)
+        except OSError: # error due to the chip resetting
+            pass
+        # wait for the chip to reset (650 ms typ.)
+        time.sleep_ms(700)
+        self._write(_POWER_REGISTER, _POWER_NORMAL)
+        self._write(_PAGE_REGISTER, 0x00)
+        self._write(_TRIGGER_REGISTER, 0x80 if self.crystal else 0)
+        time.sleep_ms(500 if self.crystal else 10)  # Crystal osc seems to take time to start.
+
+        if self.transpose != (0, 1, 2):
+            a = self.transpose
+            self._write(_AXIS_MAP_CONFIG, (a[2] << 4) + (a[1] << 2) + a[0])
+        if self.sign != (0, 0, 0):
+            a = self.sign
+            self._write(_AXIS_MAP_SIGN, a[2] + (a[1] << 1) + (a[0] << 2))
+        self.mode(_NDOF_MODE)
 
     def scaled_tuple(self, addr, fmt, buf, scale):
         return tuple(b*scale for b in ustruct.unpack(fmt, self._readn(buf, addr)))
@@ -146,16 +158,6 @@ class BNO055:
         self._i2c.readfrom_mem_into(self.address, memaddr, buf)
         return buf
 
-    # Resets the sensor to default settings.
-    def reset(self):
-        self.mode(_CONFIG_MODE)
-        try:
-            self._write(_TRIGGER_REGISTER, 0x20)
-        except OSError: # error due to the chip resetting
-            pass
-        # wait for the chip to reset (650 ms typ.)
-        time.sleep_ms(700)
-
     def mode(self, new_mode=None):
         old_mode = self._read(_MODE_REGISTER)
         if new_mode is not None:
@@ -191,7 +193,6 @@ class BNO055:
         else:
             n = 3
             buf = self.buf6
-#        self._readn(buf, reg)
         self._i2c.readfrom_mem_into(self.address, reg, buf)
         if n == 4:
             self.w = bytes_toint(buf[0], buf[1])

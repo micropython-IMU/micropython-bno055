@@ -16,9 +16,10 @@ This driver has the following objectives:
 
 Testing was done with the [Adafruit BNO055 breakout](https://www.adafruit.com/product/2472).
 This chip and breakout come highly recommended. Calibration requires effort,
-but once done the magnetometer is remarkably immune to external magnetic
+but once done the fusion algorithm is remarkably immune to external magnetic
 fields. A field which displaced my hiker's compass by 90° caused at most 2° of
-heading change on this device.
+heading change on this device. The raw magnetometer readings were radically
+altered but heading remained essentially constant.
 
 # Contents
 
@@ -31,6 +32,7 @@ heading change on this device.
    3.3.1 [Mode setting](./README.md#331-mode-setting) Modify device operating mode.  
    3.3.2 [Rate and range control](./README.md#332-rate-and-range-control) Further settings.  
   3.4 [Use in interrupt handlers](./README.md#34-use-in-interrupt-handlers)  
+  3.5 [Other methods](./README.md#35-other-methods)  
  4. [Calibration](./README.md#4-calibration)  
  5. [References](./README.md#5-references)  
 
@@ -95,6 +97,10 @@ while True:
 To calibrate the chip move the unit as per [section 4](./README.md#4-calibration)
 until all calibration values are 3.
 
+Note that if code is started automatically on power up (by a line in main.py) a
+delay of 500ms should be applied before instantiating the `BNO055`. This is to
+allow for the BNO055 chip startup time (400ms typical).
+
 ###### [Contents](./README.md#contents)
 
 # 3. The BNO055 class
@@ -123,7 +129,9 @@ implies a rotation around the Z axis.
 
 Sign values must be 0 (normal) or 1 (inverted). Hence a board rotated around
 the Y axis and mounted upside down would have `sign=(1, 0, 1)` (X and Z axes
-inverted).
+inverted). This is further explained in the 
+[Device datasheet](https://cdn-learn.adafruit.com/assets/assets/000/036/832/original/BST_BNO055_DS000_14.pdf)
+section 3.4.
 
 The constructor blocks for 700ms (1.2s if `crystal==True`).
 
@@ -191,6 +199,9 @@ old_mode = imu.mode(ACCGYRO_MODE)
 # code omitted
 imu.mode(old_mode)
 ```
+The purpose of the various modes is covered in the
+[Device datasheet](https://cdn-learn.adafruit.com/assets/assets/000/036/832/original/BST_BNO055_DS000_14.pdf)
+section 3.3.
 
 ### 3.3.2 Rate and range control
 
@@ -289,6 +300,12 @@ def cb(t):
 
 t = pyb.Timer(1, period=200, callback=cb)
 ```
+
+## 3.5 Other methods
+
+ * `reset` No args. Equivalent to pulsing the chip's reset line: restores all
+ power on defaults and resets the calibration status. Blocks for 700ms (1.2s if
+ the constructor was called with `crystal==True`).
 
 ###### [Contents](./README.md#contents)
 
