@@ -5,7 +5,7 @@
 
 import machine
 import time
-from bno055 import BNO055
+from bno055 import *
 # Pyboard hardware I2C
 i2c = machine.I2C(1)
 # ESP8266 soft I2C
@@ -16,7 +16,7 @@ while True:
     time.sleep(1)
     if not calibrated:
         calibrated = imu.calibrated()
-        print('Calibration required: sys {} gyro {} accel {} mag {}'.format(*imu.calibration_status()))
+        print('Calibration required: sys {} gyro {} accel {} mag {}'.format(*imu.cal_status()))
     print('Temperature {}°C'.format(imu.temperature()))
     print('Mag       x {:5.0f}    y {:5.0f}     z {:5.0f}'.format(*imu.mag()))
     print('Gyro      x {:5.0f}    y {:5.0f}     z {:5.0f}'.format(*imu.gyro()))

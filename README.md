@@ -6,20 +6,22 @@ based on the [Adafruit CircuitPython driver](https://github.com/adafruit/Adafrui
 
 This driver has the following objectives:
  * It runs under official MicroPython.
- * Cross-platform: designed to run on Pyboard 1.x, Pyboard D, ESPx. Should run
- on any hardware which supports the `machine` module and the I2C interface.
- * Small memory footprint for ESP8266 (~11KB).
- * Supports vehicle-relative coordinate transformation.
+ * It is cross-platform and designed to run on Pyboard 1.x, Pyboard D, ESPx. It
+ should run on any hardware supporting the `machine` module and the I2C
+ interface.
+ * There is a minimal version with small memory footprint for ESP8266 (~9.7KB).
+ * Supports changing the device mode.
+ * Supports vehicle-relative coordinate transformation on-chip.
  * Supports changing the hardware configuration.
  * Supports access in interrupt service routines.
  * Uses the MicroPython approach to coding (avoids properties/descriptors).
 
 Testing was done with the [Adafruit BNO055 breakout](https://www.adafruit.com/product/2472).
-This chip and breakout come highly recommended. Calibration requires effort,
-but once done the fusion algorithm is remarkably immune to external magnetic
-fields. A field which displaced my hiker's compass by 90° caused at most 2° of
-heading change on this device. The raw magnetometer readings were radically
-altered but heading remained essentially constant.
+This chip and breakout come highly recommended. Calibration requires a little
+practice, but once done the fusion algorithm is remarkably immune to external
+magnetic fields. A field which displaced my hiker's compass by 90° caused at
+most 2° of heading change on this device. The raw magnetometer readings changed
+radically but heading remained essentially constant.
 
 # Contents
 
@@ -34,24 +36,24 @@ altered but heading remained essentially constant.
   3.4 [Use in interrupt handlers](./README.md#34-use-in-interrupt-handlers)  
   3.5 [Other methods](./README.md#35-other-methods)  
  4. [Calibration](./README.md#4-calibration)  
- 5. [References](./README.md#5-references)  
+ 5. [Minimal version](./README.md#5-minimal-version) Minimise RAM usage.  
+ 6. [References](./README.md#6-references)  
 
 # 1. Files and dependencies
 
+ * `bno055_base.py` Base class for device driver.
  * `bno055.py` Device driver.
- * `bno055_help.py` Optional helper module.
  * `bno055_test.py` Simple test program. Can run on Pyboard or (with pin
  changes) ESP8266: see code comments.
 
-The driver has no dependencies, but will use the helper module if present. The
-helper module provides functions and constants for users wishing to change the
-configuration or operating mode of the hardware. The use of a separate module
-minimises code size for those using the default `NDOF` mode; such users can
-ignore the helper module. To access the functions and values of the helper
-module it is recommended to issue
+The driver has no dependencies. It is designed to be imported using
 ```python
-from bno055_help import *
+from bno055 import *
 ```
+In addition to the `BNO055` class this imports symbolic names for modes and
+data registers. On highly RAM-constrained targets the base class may be used
+alone with some loss of functionality, see
+[section 5](./README.md#5-minimal-version).
 
 # 2. Getting started
 
@@ -78,7 +80,7 @@ Basic usage is as follows:
 ```python
 import machine
 import time
-from bno055 import BNO055
+from bno055 import *
 # Pyboard hardware I2C
 i2c = machine.I2C(1)
 # ESP8266 soft I2C
@@ -89,7 +91,7 @@ while True:
     time.sleep(1)
     if not calibrated:
         calibrated = imu.calibrated()
-        print('Calibration required: sys {} gyro {} accel {} mag {}'.format(*imu.calibration_status()))
+        print('Calibration required: sys {} gyro {} accel {} mag {}'.format(*imu.cal_status()))
     print('Temperature {}°C'.format(imu.temperature()))
     print('Mag       x {:5.0f}    y {:5.0f}     z {:5.0f}'.format(*imu.mag()))
     print('Gyro      x {:5.0f}    y {:5.0f}     z {:5.0f}'.format(*imu.gyro()))
@@ -99,7 +101,7 @@ while True:
     print('Heading     {:4.0f} roll {:4.0f} pitch {:4.0f}'.format(*imu.euler()))
 ```
 To calibrate the chip move the unit as per [section 4](./README.md#4-calibration)
-until all calibration values are 3.
+until calibration values for gyro, accel and mag are 3 and sys is >0.
 
 Note that if code is started automatically on power up (by a line in main.py) a
 delay of 500ms should be applied before instantiating the `BNO055`. This is to
@@ -141,11 +143,11 @@ The constructor blocks for 700ms (1.2s if `crystal==True`).
 
 ## 3.2 Read only methods
 
-Return values:
+Return values (numbers are floats unless stated otherwise):
  * `mag()` Magnetometer vector `(x, y, z)` in μT (microtesla).
  * `accel()` Accelerometer vector `(x, y, z)` in m.s^-2
- * `lin_acc()` Acceleration `(x, y, z)` after removal of gravity component
- (m.s^-2).*
+ * `lin_acc()` Acceleration vector `(x, y, z)` after removal of gravity
+ component (m.s^-2).*
  * `gravity()` Gravity vector `(x, y, z)` in m.s^-2 after removal of
  acceleration data.*
  * `gyro()` Gyro vector `(x, y, z)` in deg.s^-1.
@@ -153,13 +155,14 @@ Return values:
  * `quaternion()` Quaternion `(w, x, y, z)`.*
  * `temperature()` Chip temperature as an integer °C (Celcius).
  * `calibrated()` `True` if all elements of the device are calibrated.
- * `calibration_status()` Returns `(sys, gyro, accel, mag)`. Each element has a
- value of from 0 (uncalibrated) to 3 (fully calibrated).
+ * `cal_status()` Returns `(sys, gyro, accel, mag)`. Each element has an
+ integer value from 0 (uncalibrated) to 3 (fully calibrated).
  * `external_crystal()` `True` if using an external crystal.
+ * `get_config(sensor)` See [Section 3.3.2](./README.md#332-rate-and-range-control).
 
-Many of these methods only work if the chip is in a fusion mode. If the mode is
-changed from the default to a non-fusion one, methods such as `euler` will
-return zeros. Such methods are marked with a * above.
+Some methods only produce valid data if the chip is in a fusion mode. If the
+mode is changed from the default to a non-fusion one, methods such as `euler`
+will return zeros. Such methods are marked with a * above.
 
 ###### [Contents](./README.md#contents)
 
@@ -170,19 +173,15 @@ ways of changing this for special purposes, for example where a high update
 rate is required. This can arise if readings are used in a feedback loop where
 latency can cause stability issues.
 
-`bno055_help.py` should be copied to the device and applications should issue:
-```python
-from bno055_help import *
-```
-
 ### 3.3.1 Mode setting
 
  * `mode(new_mode=None)` If a value is passed, change the mode of operation.
- Returns the mode as it was before any change was made.
+ Returns the mode as it was before any change was made. The mode is an integer.
+ The `BNO055` module provides symbolic names as per the table below.
 
 The mode of operation defines which sensors are enabled, whether fusion occurs
-and if measurements are absolute or relative. The `bno055_help` module provides
-the mode values listed below as integers.
+and if measurements are absolute or relative. The `bno055` module provides the
+mode values listed below as integers.
 
 | Mode             | Accel | Compass | Gyro | Absolute | Fusion mode |
 |:----------------:|:-----:|:-------:|:----:|:--------:|:-----------:|
@@ -204,8 +203,8 @@ The default mode is `NDOF_MODE` which supports fusion with absolute heading.
 This example illustrates restoration of the prior mode (`imu` is a `BNO055`
 instance):
 ```python
-from bno055_help import *
-# code omitted
+from bno055 import *
+# code omitted to instantiate imu
 old_mode = imu.mode(ACCGYRO_MODE)
 # code omitted
 imu.mode(old_mode)
@@ -232,58 +231,70 @@ fusion values is 100Hz.
 
 The magnetometer has a single range: units are Micro Tesla (μT).
 
-In non-fusion modes the sensors may be controlled with the following method.
+In modes which permit it, sensors may be controlled with the following method.
 
  * `config(dev, value=None)` `dev` is the device: must be `ACC`, `GYRO` or
- `MAG` (constants defined in bno055_help.py). The `value` arg may be an integer
- holding the raw value for the configuration register or a tuple. The tuple
- contains human readable values which are converted to a register value. See
- below for details specific to each sensor.
+ `MAG` (names defined in `bno055.py`). The `value` arg is a tuple holding the
+ requested configuration. See below for details specific to each sensor.
 
 The default value of `None` causes no change to be made. In each case the
-method returns the raw register value as it was before any change was made:
-this allows old values to be restored, e.g.  
+method returns the config tuple as it was before any change was made. In
+certain circumstances the chip can return an unknown value. This was observed
+in the case of the initial value from the magnetometer. In such cases the
+result will be `False`. Returning the prior value allows old values to be
+restored, e.g.  
 ```python
 old_config = imu.config(ACC, (2, 250))
 # ...
-imu.config(ACC, old_config)  # Restore old config
+if old_config:  # Valid config returned
+    imu.config(ACC, old_config)  # Restore old config
 ```
 Note that the hardware will only allow configuration changes in appropriate
 modes. For example to change gyro settings the chip must be in a non-fusion
-mode which enables the gyro.
+mode which enables the gyro. If the mode is such that changes are not allowed,
+failure will be silent. If in doubt check the result by reading back the
+resultant config:
+```python
+imu.mode(ACCGYRO_MODE)  # Allows config change to ACC or GYRO
+cfg = (2, 250)  # Intended config
+imu.config(ACC, cfg)
+if imu.config(ACC) == cfg:
+    print('Success')
+```
 
 #### Accelerometer (dev == ACC)
 
-`value` is normally a 2-tuple comprising `(range, bandwidth)`
+`value` is a 2-tuple comprising `(range, bandwidth)`
 Allowable values:  
 Range: 2, 4, 8, 16 (G).  
 Bandwidth: 8, 16, 31, 62, 125, 250, 500, 1000 (Hz).  
-The return value may be restored to human-readable form by means of the
-`get_tuple` function:
+The outcome of a change may be shown by means of the `.config(ACC)` method.
 ```python
-from bno055_help import *
+from bno055 import *
 # code omitted
 imu.mode(ACCONLY_MODE)  # non-fusion mode
-print(get_tuple(ACC, imu.config(ACC, (2, 1000))))  # Update. Display prior value.
-print(get_tuple(ACC, imu.config(ACC)))  # Read back and display new value.
+cfg = (2, 1000)  # Intended config
+imu.config(ACC, cfg) # Update.
+if imu.config(ACC) == cfg:
+    print('Success')
 ```
 
-#### gyro_config
+#### Gyro (dev == GYRO)
 
-`value` is normally a 2-tuple comprising `(range, bandwidth)`
+`value` is a 2-tuple comprising `(range, bandwidth)`
 Allowable values:  
 Range: 125, 250, 500, 1000, 2000 (dps)  
 Bandwidth: 12, 23, 32, 47, 64, 116, 230, 523 (Hz).  
-The return value may be restored to human-readable form by means of the
-`get_tuple(GYRO, value)` function.
+The outcome of a change may be shown by means of the `.config(GYRO)` method.
 
-#### mag_config
+#### Magnetometer (dev == MAG)
 
-`value` is normally a 1-tuple comprising `(rate,)` being the update rate in Hz.
+`value` is a 1-tuple comprising `(rate,)` being the update rate in Hz.
 Allowable values:  
 Rate: 2, 6, 8, 10, 15, 20, 25, 30 (Hz)  
-The return value may be restored to human-readable form by means of the
-`get_tuple(MAG, value)` function.
+The outcome of a change may be shown by means of the `.config(MAG)` method.
+Note that on first call the prior config may be unknown and the method will
+return `False`. This is a chip behaviour.
 
 ###### [Contents](./README.md#contents)
 
@@ -293,8 +304,7 @@ The `BNO055` class supports access in interrupt service routines (ISR's) by
 means of the `iget` method and `w`, `x`, `y`, and `z` bound variables. The ISR
 calls `iget` with the name of the value to be accessed. On return the bound
 variables are updated with the raw data from the device. Each value is a signed
-integer and requires scaling to be converted to standard units of measurement.
-The symbolic variable names are provided in `bno055_help.py`.
+integer that requires scaling to be converted to standard units of measurement.
 
 |  Name        | Scaling     | Units    |
 |:------------:|:-----------:|:--------:|
@@ -322,20 +332,28 @@ t = pyb.Timer(1, period=200, callback=cb)
 
  * `reset` No args. Equivalent to pulsing the chip's reset line: restores all
  power on defaults and resets the calibration status. Blocks for 700ms (1.2s if
- the constructor was called with `crystal==True`).
+ the constructor was called with `crystal==True`). Reinstates vehicle relative
+ transformations specified to the constructor.
 
 ###### [Contents](./README.md#contents)
 
 # 4. Calibration
 
-The following text is adapted from the chip datasheet. Note that calibration
-requires only movement of the device while running: the process is internal to
-the chip. The calibration status may be read by methods described in
-[section 3.2](./README.md#32-read-only-methods).
+Calibration requires only movement of the device while running: the process is
+internal to the chip and its nature is opaque. The calibration status may be
+read by methods described in [section 3.2](./README.md#32-read-only-methods).
 
 Until the device is calibrated its orientation will be relative to that when it
 was powered on. When system calibration status becomes 1 or higher the device
 has found magnetic north and orientation values become absolute.
+([Source](https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/device-calibration)).
+The status returned by the chip, and hence the return values of `.calibrated`
+and `.cal_status` methods can regress after successful calibration. The meaning
+of this is unclear. It seems reasonable to assume that once the chip returns a
+good status it can be assumed to be OK; the demo scripts make that assumption.
+
+The following text is adapted from the chip datasheet. I recommend watching
+[this Bosch video](https://youtu.be/Bw0WuAyGsnY) for a clearer exposition.
 
 Though the sensor fusion software runs the calibration algorithm of all the
 three sensors (accelerometer, gyroscope and magnetometer) in the background to
@@ -358,15 +376,15 @@ after every ‘Power on Reset’ for proper calibration of the device.
  * Make sure that there is slow movement between 2 stable positions.
  * The 6 stable positions could be in any direction, but make sure that the
  device is lying at least once perpendicular to the x, y and z axis.
- * The `calibration_status()` method may be used to see the calibration status
- of the accelerometer.
+ * The `cal_status()` method may be used to see the calibration status of the
+ accelerometer.
 
 ### Gyroscope Calibration
 
  * Place the device in a single stable position for a period of few seconds to
  allow the gyroscope to calibrate
- * The `calibration_status()` method may be used to see the calibration status
- of the gyroscope.
+ * The `cal_status()` method may be used to see the calibration status of the
+ gyroscope.
 
 ### Magnetometer Calibration
 
@@ -376,7 +394,7 @@ steps mentioned below are to calibrate the magnetometer for hard-iron
 distortions.
 
  * Make some random movements (for example: writing the number ‘8’ on air)
- until the `calibration_status()` method indicates fully calibrated.
+ until the `cal_status()` method indicates fully calibrated.
  * It takes more calibration movements to get the magnetometer calibrated than
  in the NDOF mode.
 
@@ -385,12 +403,47 @@ NDOF:
  * The same random movements have to be made to calibrate the sensor as in the
  FMC_OFF mode, but here it takes relatively less calibration movements (and
  slightly higher current consumption) to get the magnetometer calibrated.
- * The `calibration_status()` method can be used to see the calibration status
- of the magnetometer.
+ * The `cal_status()` method can be used to see the calibration status of the
+ magnetometer.
 
 ###### [Contents](./README.md#contents)
 
-# 5. References
+# 5. Minimal Version
+
+This is intended for devices such as ESP8266 where RAM is limited. Note that
+the full version will run on ESP8266 using ~14K of RAM. The minimal version
+reduces this to just over 9K.
+
+The minimal version does not support vehicle-relative coordinates, ISR usage
+or configuration changes. Mode changes can be done, but symbolic names of modes
+are not supplied. The version is primarily intended for use in the default
+`NDOF` mode.
+
+In use the `bno055_base` module is imported and the base class is used. Example
+tested on an ESP8266:
+```python
+import machine
+import time
+from bno055_base import BNO055_BASE
+
+i2c = machine.I2C(-1, scl=machine.Pin(2), sda=machine.Pin(0))
+imu = BNO055_BASE(i2c)
+calibrated = False
+while True:
+    time.sleep(1)
+    if not calibrated:
+        calibrated = imu.calibrated()
+        print('Calibration required: sys {} gyro {} accel {} mag {}'.format(*imu.cal_status()))
+    print('Temperature {}°C'.format(imu.temperature()))
+    print('Mag       x {:5.0f}    y {:5.0f}     z {:5.0f}'.format(*imu.mag()))
+    print('Gyro      x {:5.0f}    y {:5.0f}     z {:5.0f}'.format(*imu.gyro()))
+    print('Accel     x {:5.1f}    y {:5.1f}     z {:5.1f}'.format(*imu.accel()))
+    print('Lin acc.  x {:5.1f}    y {:5.1f}     z {:5.1f}'.format(*imu.lin_acc()))
+    print('Gravity   x {:5.1f}    y {:5.1f}     z {:5.1f}'.format(*imu.gravity()))
+    print('Heading     {:4.0f} roll {:4.0f} pitch {:4.0f}'.format(*imu.euler()))
+```
+
+# 6. References
 
 [Adafruit BNO055 breakout](https://www.adafruit.com/product/2472)  
 [Adafruit CircuitPython driver](https://github.com/adafruit/Adafruit_CircuitPython_BNO055.git).  
