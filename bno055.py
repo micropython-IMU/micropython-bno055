@@ -36,7 +36,8 @@ from micropython import const
 try:
     from bno055_help import *
 except ImportError:
-    print('Not using bno055_help.py')
+    print('Not ', end='')
+print('using bno055_help.py')
 
 _CHIP_ID = const(0xa0)
 
@@ -65,7 +66,12 @@ def bytes_toint(lsb, msb):
 # Transposition (x, y, z) 0 == x 1 == y 2 == z hence (0, 1, 2) is no change
 # Scaling (x, y, z) 0 == normal 1 == invert
 class BNO055:
- 
+
+    @staticmethod
+    def argcheck(arg, name):
+        if len(arg) != 3 or not (isinstance(arg, list) or isinstance(arg, tuple)):
+            raise ValueError(name + ' must be a 3 element list or tuple')
+
     def __init__(self, i2c, address=0x28, crystal=True, transpose=(0, 1, 2), sign=(0, 0, 0)):
         self._i2c = i2c
         self.address = address
@@ -82,13 +88,13 @@ class BNO055:
         self.x = 0
         self.y = 0
         self.z = 0
-        self.mag = lambda : self.scaled_tuple(0x0e, '<hhh', self.buf6, 1/16)  # microteslas (x, y, z)
-        self.accel = lambda : self.scaled_tuple(0x08, '<hhh', self.buf6, 1/100)  # m.s^-2
-        self.lin_acc = lambda : self.scaled_tuple(0x28, '<hhh', self.buf6, 1/100)  # m.s^-2
-        self.gravity = lambda : self.scaled_tuple(0x2e, '<hhh', self.buf6, 1/100)  # m.s^-2
-        self.gyro = lambda : self.scaled_tuple(0x14, '<hhh', self.buf6, 1/16)  # deg.s^-1
-        self.euler = lambda : self.scaled_tuple(0x1a, '<hhh', self.buf6, 1/16)  # degrees (heading, roll, pitch)
-        self.quaternion = lambda : self.scaled_tuple(0x20, '<hhhh', self.buf8, 1/(1<<14))  # (w, x, y, z)
+        self.mag = lambda : self.scaled_tuple(0x0e, 1/16)  # microteslas (x, y, z)
+        self.accel = lambda : self.scaled_tuple(0x08, 1/100)  # m.s^-2
+        self.lin_acc = lambda : self.scaled_tuple(0x28, 1/100)  # m.s^-2
+        self.gravity = lambda : self.scaled_tuple(0x2e, 1/100)  # m.s^-2
+        self.gyro = lambda : self.scaled_tuple(0x14, 1/16)  # deg.s^-1
+        self.euler = lambda : self.scaled_tuple(0x1a, 1/16)  # degrees (heading, roll, pitch)
+        self.quaternion = lambda : self.scaled_tuple(0x20, 1/(1<<14), bytearray(8), '<hhhh')  # (w, x, y, z)
         try:
             chip_id = self._read(_ID_REGISTER)
         except OSError:
@@ -118,12 +124,8 @@ class BNO055:
             self._write(_AXIS_MAP_SIGN, a[2] + (a[1] << 1) + (a[0] << 2))
         self.mode(_NDOF_MODE)
 
-    def scaled_tuple(self, addr, fmt, buf, scale):
+    def scaled_tuple(self, addr, scale, buf=bytearray(6), fmt='<hhh'):
         return tuple(b*scale for b in ustruct.unpack(fmt, self._readn(buf, addr)))
-
-    def argcheck(self, arg, name):
-        if len(arg) != 3 or not (isinstance(arg, list) or isinstance(arg, tuple)):
-            raise ValueError(name + ' must be a 3 element list or tuple')
 
     def temperature(self):
         t = self._read(0x34)  # Celcius signed (corrected from Adafruit)
@@ -139,9 +141,7 @@ class BNO055:
         return sys, gyro, accel, mag
 
     def calibrated(self):
-        """Boolean indicating calibration status."""
-        sys, gyro, accel, mag = self.calibration_status()
-        return sys == gyro == accel == mag == 0x03
+        return min(self.calibration_status()) == 3
 
     # read byte from register, return int
     def _read(self, memaddr, buf=bytearray(1)):  # memaddr = memory location within the I2C device

@@ -46,8 +46,9 @@ altered but heading remained essentially constant.
 The driver has no dependencies, but will use the helper module if present. The
 helper module provides functions and constants for users wishing to change the
 configuration or operating mode of the hardware. The use of a separate module
-minimises code size for those using the default `NDOF` mode. To access the
-functions and values of the helper module it is recommended to issue
+minimises code size for those using the default `NDOF` mode; such users can
+ignore the helper module. To access the functions and values of the helper
+module it is recommended to issue
 ```python
 from bno055_help import *
 ```
@@ -78,13 +79,16 @@ Basic usage is as follows:
 import machine
 import time
 from bno055 import BNO055
-
-i2c = machine.I2C(1)  # Pyboard hardware I2C: adapt for other targets
-imu = BNO055(i2c)  # For hardware with a crystal (e.g. Adafruit)
-# imu =BNO055(i2c, crystal=False)
+# Pyboard hardware I2C
+i2c = machine.I2C(1)
+# ESP8266 soft I2C
+# i2c = machine.I2C(-1, scl=machine.Pin(2), sda=machine.Pin(0))
+imu = BNO055(i2c)
+calibrated = False
 while True:
     time.sleep(1)
-    if not imu.calibrated():
+    if not calibrated:
+        calibrated = imu.calibrated()
         print('Calibration required: sys {} gyro {} accel {} mag {}'.format(*imu.calibration_status()))
     print('Temperature {}°C'.format(imu.temperature()))
     print('Mag       x {:5.0f}    y {:5.0f}     z {:5.0f}'.format(*imu.mag()))
@@ -141,17 +145,21 @@ Return values:
  * `mag()` Magnetometer vector `(x, y, z)` in μT (microtesla).
  * `accel()` Accelerometer vector `(x, y, z)` in m.s^-2
  * `lin_acc()` Acceleration `(x, y, z)` after removal of gravity component
- (m.s^-2).
+ (m.s^-2).*
  * `gravity()` Gravity vector `(x, y, z)` in m.s^-2 after removal of
- acceleration data.
+ acceleration data.*
  * `gyro()` Gyro vector `(x, y, z)` in deg.s^-1.
- * `euler()` Euler angles in degrees `(heading, roll, pitch)`.
- * `quaternion()` Quaternion `(w, x, y, z)`.
+ * `euler()` Euler angles in degrees `(heading, roll, pitch)`.*
+ * `quaternion()` Quaternion `(w, x, y, z)`.*
  * `temperature()` Chip temperature as an integer °C (Celcius).
  * `calibrated()` `True` if all elements of the device are calibrated.
  * `calibration_status()` Returns `(sys, gyro, accel, mag)`. Each element has a
  value of from 0 (uncalibrated) to 3 (fully calibrated).
  * `external_crystal()` `True` if using an external crystal.
+
+Many of these methods only work if the chip is in a fusion mode. If the mode is
+changed from the default to a non-fusion one, methods such as `euler` will
+return zeros. Such methods are marked with a * above.
 
 ###### [Contents](./README.md#contents)
 
@@ -159,10 +167,10 @@ Return values:
 
 Many applications will use the default mode of the chip. This section describes
 ways of changing this for special purposes, for example where a high update
-rate is required because the readings are used in a feedback loop where latency
-presents stability issues.
+rate is required. This can arise if readings are used in a feedback loop where
+latency can cause stability issues.
 
-Such applications can access additional functions and constants by issuing
+`bno055_help.py` should be copied to the device and applications should issue:
 ```python
 from bno055_help import *
 ```
@@ -193,7 +201,8 @@ the mode values listed below as integers.
 | NDOF_MODE        |   X   |   X     |  X   |     X    |   Y         |
 
 The default mode is `NDOF_MODE` which supports fusion with absolute heading.
-Example usage (`imu` is a `BNO055` instance):
+This example illustrates restoration of the prior mode (`imu` is a `BNO055`
+instance):
 ```python
 from bno055_help import *
 # code omitted
@@ -211,7 +220,9 @@ section 3.3.
 
 In non-fusion modes the chip allows control of the update rate of each sensor
 and the range of the accelerometer and gyro. In fusion modes rates are fixed:
-the only available change is to the accelerometer range.
+the only available change is to the accelerometer range. The folowing shows the
+default setings after initialisation (mode is `NDOF`). The update rate of
+fusion values is 100Hz.
 
 | Device | Full scale  | Update rate |
 |:------:|:-----------:|:-----------:|
@@ -238,8 +249,8 @@ old_config = imu.config(ACC, (2, 250))
 imu.config(ACC, old_config)  # Restore old config
 ```
 Note that the hardware will only allow configuration changes in appropriate
-modes. For example to change the accelerometer config successfully, the chip
-must be in a non-fusion mode which enables the accelerometer.
+modes. For example to change gyro settings the chip must be in a non-fusion
+mode which enables the gyro.
 
 #### Accelerometer (dev == ACC)
 
