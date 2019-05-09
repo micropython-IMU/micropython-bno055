@@ -155,8 +155,8 @@ Return values (numbers are floats unless stated otherwise):
  * `quaternion()` Quaternion `(w, x, y, z)`.*
  * `temperature()` Chip temperature as an integer °C (Celcius).
  * `calibrated()` `True` if all elements of the device are calibrated.
- * `cal_status()` Returns `(sys, gyro, accel, mag)`. Each element has an
- integer value from 0 (uncalibrated) to 3 (fully calibrated).
+ * `cal_status()` Returns bytearray  `[sys, gyro, accel, mag]`. Each element
+ has a value from 0 (uncalibrated) to 3 (fully calibrated).
  * `external_crystal()` `True` if using an external crystal.
  * `get_config(sensor)` See [Section 3.3.2](./README.md#332-rate-and-range-control).
 
@@ -352,8 +352,9 @@ and `.cal_status` methods can regress after successful calibration. The meaning
 of this is unclear. It seems reasonable to assume that once the chip returns a
 good status it can be assumed to be OK; the demo scripts make that assumption.
 
-The following text is adapted from the chip datasheet. I recommend watching
-[this Bosch video](https://youtu.be/Bw0WuAyGsnY) for a clearer exposition.
+The following text is adapted from the chip datasheet; it could be clearer. I
+recommend watching [this Bosch video](https://youtu.be/Bw0WuAyGsnY) for a good
+exposition.
 
 Though the sensor fusion software runs the calibration algorithm of all the
 three sensors (accelerometer, gyroscope and magnetometer) in the background to

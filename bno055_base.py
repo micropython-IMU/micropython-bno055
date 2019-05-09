@@ -1,5 +1,5 @@
-# bno055_base.py Minimal MicroPython driver for Bosch BNO055 nine degree of freedom inertial
-# measurement unit module with sensor fusion.
+# bno055_base.py Minimal MicroPython driver for Bosch BNO055 nine degree of
+# freedom inertial measurement unit module with sensor fusion.
 
 # The MIT License (MIT)
 #
@@ -94,19 +94,19 @@ class BNO055_BASE:
         t = self._read(0x34)  # Celcius signed (corrected from Adafruit)
         return t if t < 128 else t - 256
 
-    # Return tuple containing sys, gyro, accel, and mag calibration data.
-    def cal_status(self):
+    # Return bytearray [sys, gyro, accel, mag] calibration data.
+    def cal_status(self, s=bytearray(4)):
         cdata = self._read(_CALIBRATION_REGISTER)
-        sys = (cdata >> 6) & 0x03
-        gyro = (cdata >> 4) & 0x03
-        accel = (cdata >> 2) & 0x03
-        mag = cdata & 0x03
-        return sys, gyro, accel, mag
+        s[0] = (cdata >> 6) & 0x03  # sys
+        s[1] = (cdata >> 4) & 0x03  # gyro
+        s[2] = (cdata >> 2) & 0x03  # accel
+        s[3] = cdata & 0x03  # mag
+        return s
 
     def calibrated(self):
         s = self.cal_status()
         # https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/device-calibration
-        return min(s[1:4]) == 3 and s[0] > 0
+        return min(s[1:]) == 3 and s[0] > 0
 
     # read byte from register, return int
     def _read(self, memaddr, buf=bytearray(1)):  # memaddr = memory location within the I2C device
