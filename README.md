@@ -164,6 +164,10 @@ Some methods only produce valid data if the chip is in a fusion mode. If the
 mode is changed from the default to a non-fusion one, methods such as `euler`
 will return zeros. Such methods are marked with a * above.
 
+See [my notes on quaternions](https://github.com/peterhinch/micropython-samples/blob/master/README.md#412-quaternions)
+for code enabling them to be used to perform 3D rotation with minimal
+mathematics. They are easier to use for this purpose than Euler angles.
+
 ###### [Contents](./README.md#contents)
 
 ## 3.3 Changing the device configuration
