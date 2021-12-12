@@ -135,7 +135,7 @@ class BNO055_BASE:
         # https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/device-calibration
         return min(s[1:]) == 3 and s[0] > 0
 
-    def sensorOffsets(self):
+    def sensor_offsets(self):
         lastMode = self._mode
 
         self.mode(_CONFIG_MODE)
@@ -144,7 +144,7 @@ class BNO055_BASE:
 
         return offsets
 
-    def setOffsets(self, buf):
+    def set_offsets(self, buf):
         lastMode = self._mode
         self.mode(_CONFIG_MODE)
 
