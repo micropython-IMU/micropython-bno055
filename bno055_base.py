@@ -50,6 +50,32 @@ _TRIGGER_REGISTER = const(0x3f)
 _POWER_REGISTER = const(0x3e)
 _ID_REGISTER = const(0x00)
 
+ACCEL_OFFSET_X_LSB_ADDR = const(0x55)
+ACCEL_OFFSET_X_MSB_ADDR = const(0x56)
+ACCEL_OFFSET_Y_LSB_ADDR = const(0x57)
+ACCEL_OFFSET_Y_MSB_ADDR = const(0x58)
+ACCEL_OFFSET_Z_LSB_ADDR = const(0x59)
+ACCEL_OFFSET_Z_MSB_ADDR = const(0x5A)
+
+MAG_OFFSET_X_LSB_ADDR = const(0x5B)
+MAG_OFFSET_X_MSB_ADDR = const(0x5C)
+MAG_OFFSET_Y_LSB_ADDR = const(0x5D)
+MAG_OFFSET_Y_MSB_ADDR = const(0x5E)
+MAG_OFFSET_Z_LSB_ADDR = const(0x5F)
+MAG_OFFSET_Z_MSB_ADDR = const(0x60)
+
+GYRO_OFFSET_X_LSB_ADDR = const(0x61)
+GYRO_OFFSET_X_MSB_ADDR = const(0x62)
+GYRO_OFFSET_Y_LSB_ADDR = const(0x63)
+GYRO_OFFSET_Y_MSB_ADDR = const(0x64)
+GYRO_OFFSET_Z_LSB_ADDR = const(0x65)
+GYRO_OFFSET_Z_MSB_ADDR = const(0x66)
+
+ACCEL_RADIUS_LSB_ADDR = const(0x67)
+ACCEL_RADIUS_MSB_ADDR = const(0x68)
+MAG_RADIUS_LSB_ADDR = const(0x69)
+MAG_RADIUS_MSB_ADDR = const(0x6A)
+
 class BNO055_BASE:
 
     def __init__(self, i2c, address=0x28, crystal=True, transpose=(0, 1, 2), sign=(0, 0, 0)):
@@ -63,6 +89,7 @@ class BNO055_BASE:
         self.gyro = lambda : self.scaled_tuple(0x14, 1/16)  # deg.s^-1
         self.euler = lambda : self.scaled_tuple(0x1a, 1/16)  # degrees (heading, roll, pitch)
         self.quaternion = lambda : self.scaled_tuple(0x20, 1/(1<<14), bytearray(8), '<hhhh')  # (w, x, y, z)
+        self._mode = _CONFIG_MODE
         try:
             chip_id = self._read(_ID_REGISTER)
         except OSError:
@@ -108,6 +135,56 @@ class BNO055_BASE:
         # https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/device-calibration
         return min(s[1:]) == 3 and s[0] > 0
 
+    def sensor_offsets(self):
+        lastMode = self._mode
+
+        self.mode(_CONFIG_MODE)
+        offsets = self._readn(bytearray(22), ACCEL_OFFSET_X_LSB_ADDR)
+        self.mode(lastMode)
+
+        return offsets
+
+    def set_offsets(self, buf):
+        lastMode = self._mode
+        self.mode(_CONFIG_MODE)
+
+        time.sleep_ms(25)
+
+        '''Note: Configuration will take place only when user writes to the last
+            byte of each config data pair (ex. ACCEL_OFFSET_Z_MSB_ADDR, etc.).
+            Therefore the last byte must be written whenever the user wants to
+            changes the configuration.'''
+
+        self._write(ACCEL_OFFSET_X_LSB_ADDR, buf[0])
+        self._write(ACCEL_OFFSET_X_MSB_ADDR, buf[1])
+        self._write(ACCEL_OFFSET_Y_LSB_ADDR, buf[2])
+        self._write(ACCEL_OFFSET_Y_MSB_ADDR, buf[3])
+        self._write(ACCEL_OFFSET_Z_LSB_ADDR, buf[4])
+        self._write(ACCEL_OFFSET_Z_MSB_ADDR, buf[5])
+
+        self._write(MAG_OFFSET_X_LSB_ADDR, buf[6])
+        self._write(MAG_OFFSET_X_MSB_ADDR, buf[7])
+        self._write(MAG_OFFSET_Y_LSB_ADDR, buf[8])
+        self._write(MAG_OFFSET_Y_MSB_ADDR, buf[9])
+        self._write(MAG_OFFSET_Z_LSB_ADDR, buf[10])
+        self._write(MAG_OFFSET_Z_MSB_ADDR, buf[11])
+
+        self._write(GYRO_OFFSET_X_LSB_ADDR, buf[12])
+        self._write(GYRO_OFFSET_X_MSB_ADDR, buf[13])
+        self._write(GYRO_OFFSET_Y_LSB_ADDR, buf[14])
+        self._write(GYRO_OFFSET_Y_MSB_ADDR, buf[15])
+        self._write(GYRO_OFFSET_Z_LSB_ADDR, buf[16])
+        self._write(GYRO_OFFSET_Z_MSB_ADDR, buf[17])
+
+        self._write(ACCEL_RADIUS_LSB_ADDR, buf[18])
+        self._write(ACCEL_RADIUS_MSB_ADDR, buf[19])
+
+        self._write(MAG_RADIUS_LSB_ADDR, buf[20])
+        self._write(MAG_RADIUS_MSB_ADDR, buf[21])
+
+        self.mode(lastMode)
+
+
     # read byte from register, return int
     def _read(self, memaddr, buf=bytearray(1)):  # memaddr = memory location within the I2C device
         self._i2c.readfrom_mem_into(self.address, memaddr, buf)
@@ -131,6 +208,8 @@ class BNO055_BASE:
             if new_mode != _CONFIG_MODE:
                 self._write(_MODE_REGISTER, new_mode)
                 time.sleep_ms(10)  # Table 3.6
+
+        self._mode = new_mode
         return old_mode
 
     def external_crystal(self):

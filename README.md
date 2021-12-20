@@ -25,19 +25,19 @@ radically but heading remained essentially constant.
 
 # Contents
 
- 1. [Files and dependencies](./README.md#1-files-and-dependencies)  
- 2. [Getting started](./README.md#2-getting-started)  
- 3. [The BNO055 class](./README.md#3-the-bno055-class)  
-  3.1 [Constructor](./README.md#31-constructor)  
-  3.2 [Read only methods](./README.md#32-read-only-methods) Read data from device.  
-  3.3 [Changing the device configuration](./README.md#33-changing-the-device-configuration)  
-    3.3.1 [Mode setting](./README.md#331-mode-setting) Modify device operating mode.  
-    3.3.2 [Rate and range control](./README.md#332-rate-and-range-control) Further settings.  
-  3.4 [Use in interrupt handlers](./README.md#34-use-in-interrupt-handlers)  
-  3.5 [Other methods](./README.md#35-other-methods)  
- 4. [Calibration](./README.md#4-calibration)  
- 5. [Minimal version](./README.md#5-minimal-version) Minimise RAM usage.  
- 6. [References](./README.md#6-references)  
+ 1. [Files and dependencies](./README.md#1-files-and-dependencies)
+ 2. [Getting started](./README.md#2-getting-started)
+ 3. [The BNO055 class](./README.md#3-the-bno055-class)
+  3.1 [Constructor](./README.md#31-constructor)
+  3.2 [Read only methods](./README.md#32-read-only-methods) Read data from device.
+  3.3 [Changing the device configuration](./README.md#33-changing-the-device-configuration)
+    3.3.1 [Mode setting](./README.md#331-mode-setting) Modify device operating mode.
+    3.3.2 [Rate and range control](./README.md#332-rate-and-range-control) Further settings.
+  3.4 [Use in interrupt handlers](./README.md#34-use-in-interrupt-handlers)
+  3.5 [Other methods](./README.md#35-other-methods)
+ 4. [Calibration](./README.md#4-calibration)
+ 5. [Minimal version](./README.md#5-minimal-version) Minimise RAM usage.
+ 6. [References](./README.md#6-references)
 
 # 1. Files and dependencies
 
@@ -135,7 +135,7 @@ implies a rotation around the Z axis.
 
 Sign values must be 0 (normal) or 1 (inverted). Hence a board rotated around
 the Y axis and mounted upside down would have `sign=(1, 0, 1)` (X and Z axes
-inverted). This is further explained in the 
+inverted). This is further explained in the
 [Device datasheet](https://cdn-learn.adafruit.com/assets/assets/000/036/832/original/BST_BNO055_DS000_14.pdf)
 section 3.4.
 
@@ -157,6 +157,10 @@ Return values (numbers are floats unless stated otherwise):
  * `calibrated()` `True` if all elements of the device are calibrated.
  * `cal_status()` Returns bytearray  `[sys, gyro, accel, mag]`. Each element
  has a value from 0 (uncalibrated) to 3 (fully calibrated).
+ * `sensor_offsets()` Returns the current calibration offsets stored on the device as
+ a `bytearray`.
+ * `set_offsets()` Sets the current calibration offsets of the device. For example,
+ this can be called with the results of `sensor_offsets()` after a reset.
  * `external_crystal()` `True` if using an external crystal.
  * `get_config(sensor)` See [Section 3.3.2](./README.md#332-rate-and-range-control).
 
@@ -246,7 +250,7 @@ method returns the config tuple as it was before any change was made. In
 certain circumstances the chip can return an unknown value. This was observed
 in the case of the initial value from the magnetometer. In such cases the
 result will be `False`. Returning the prior value allows old values to be
-restored, e.g.  
+restored, e.g.
 ```python
 old_config = imu.config(ACC, (2, 250))
 # ...
@@ -269,9 +273,9 @@ if imu.config(ACC) == cfg:
 #### Accelerometer (dev == ACC)
 
 `value` is a 2-tuple comprising `(range, bandwidth)`
-Allowable values:  
-Range: 2, 4, 8, 16 (G).  
-Bandwidth: 8, 16, 31, 62, 125, 250, 500, 1000 (Hz).  
+Allowable values:
+Range: 2, 4, 8, 16 (G).
+Bandwidth: 8, 16, 31, 62, 125, 250, 500, 1000 (Hz).
 The outcome of a change may be shown by means of the `.config(ACC)` method.
 ```python
 from bno055 import *
@@ -286,16 +290,16 @@ if imu.config(ACC) == cfg:
 #### Gyro (dev == GYRO)
 
 `value` is a 2-tuple comprising `(range, bandwidth)`
-Allowable values:  
-Range: 125, 250, 500, 1000, 2000 (dps)  
-Bandwidth: 12, 23, 32, 47, 64, 116, 230, 523 (Hz).  
+Allowable values:
+Range: 125, 250, 500, 1000, 2000 (dps)
+Bandwidth: 12, 23, 32, 47, 64, 116, 230, 523 (Hz).
 The outcome of a change may be shown by means of the `.config(GYRO)` method.
 
 #### Magnetometer (dev == MAG)
 
 `value` is a 1-tuple comprising `(rate,)` being the update rate in Hz.
-Allowable values:  
-Rate: 2, 6, 8, 10, 15, 20, 25, 30 (Hz)  
+Allowable values:
+Rate: 2, 6, 8, 10, 15, 20, 25, 30 (Hz)
 The outcome of a change may be shown by means of the `.config(MAG)` method.
 Note that on first call the prior config may be unknown and the method will
 return `False`. This is a chip behaviour.
@@ -411,6 +415,21 @@ NDOF:
  * The `cal_status()` method can be used to see the calibration status of the
  magnetometer.
 
+
+### Calibration Restoration
+
+Restoring previous calibration offsets after a reset is also supported, via the
+`sensor_offsets()` and `set_offsets()` methods.
+
+After a successful calibration, `sensor_offsets()` can be called to retrieve a
+`bytearray`. This can then, for example, be written to disk for loading after a
+reset of the device.
+
+The corresponding `set_offsets()` method allows for restoring calibration offsets
+stored in said `bytearray`. Please be aware that the magnetometer's calibration
+status will remain as 0, as per the `cal_status()` method, even after restoring
+its offsets.
+
 ###### [Contents](./README.md#contents)
 
 # 5. Minimal Version
@@ -450,6 +469,6 @@ while True:
 
 # 6. References
 
-[Adafruit BNO055 breakout](https://www.adafruit.com/product/2472)  
-[Adafruit CircuitPython driver](https://github.com/adafruit/Adafruit_CircuitPython_BNO055.git).  
+[Adafruit BNO055 breakout](https://www.adafruit.com/product/2472)
+[Adafruit CircuitPython driver](https://github.com/adafruit/Adafruit_CircuitPython_BNO055.git).
 [Device datasheet](https://cdn-learn.adafruit.com/assets/assets/000/036/832/original/BST_BNO055_DS000_14.pdf)
