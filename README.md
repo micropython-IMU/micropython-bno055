@@ -25,24 +25,24 @@ radically but heading remained essentially constant.
 
 # Contents
 
- 1. [Files and dependencies](./README.md#1-files-and-dependencies)
- 2. [Getting started](./README.md#2-getting-started)
- 3. [The BNO055 class](./README.md#3-the-bno055-class)
-  3.1 [Constructor](./README.md#31-constructor)
-  3.2 [Read only methods](./README.md#32-read-only-methods) Read data from device.
-  3.3 [Changing the device configuration](./README.md#33-changing-the-device-configuration)
-    3.3.1 [Mode setting](./README.md#331-mode-setting) Modify device operating mode.
-    3.3.2 [Rate and range control](./README.md#332-rate-and-range-control) Further settings.
-  3.4 [Use in interrupt handlers](./README.md#34-use-in-interrupt-handlers)
-  3.5 [Other methods](./README.md#35-other-methods)
- 4. [Calibration](./README.md#4-calibration)
- 5. [Minimal version](./README.md#5-minimal-version) Minimise RAM usage.
- 6. [References](./README.md#6-references)
+ 1. [Files and dependencies](./README.md#1-files-and-dependencies)  
+ 2. [Getting started](./README.md#2-getting-started)  
+ 3. [The BNO055 class](./README.md#3-the-bno055-class)  
+  3.1 [Constructor](./README.md#31-constructor)  
+  3.2 [Read only methods](./README.md#32-read-only-methods) Read data from device.  
+  3.3 [Changing the device configuration](./README.md#33-changing-the-device-configuration)  
+    3.3.1 [Mode setting](./README.md#331-mode-setting) Modify device operating mode.  
+    3.3.2 [Rate and range control](./README.md#332-rate-and-range-control) Further settings.  
+  3.4 [Use in interrupt handlers](./README.md#34-use-in-interrupt-handlers)  
+  3.5 [Other methods](./README.md#35-other-methods)  
+ 4. [Calibration](./README.md#4-calibration)  
+ 5. [Minimal version](./README.md#5-minimal-version) Minimise RAM usage.  
+ 6. [References](./README.md#6-references)  
 
 # 1. Files and dependencies
 
- * `bno055_base.py` Base class for device driver.
- * `bno055.py` Device driver.
+ * `bno055_base.py` Base class for device driver.  
+ * `bno055.py` Device driver.  
  * `bno055_test.py` Simple test program. Can run on Pyboard or (with pin
  changes) ESP8266: see code comments.
 
@@ -143,7 +143,7 @@ The constructor blocks for 700ms (1.2s if `crystal==True`).
 
 ## 3.2 Read only methods
 
-Return values (numbers are floats unless stated otherwise):
+Return values (numbers are floats unless stated otherwise):  
  * `mag()` Magnetometer vector `(x, y, z)` in μT (microtesla).
  * `accel()` Accelerometer vector `(x, y, z)` in m.s^-2
  * `lin_acc()` Acceleration vector `(x, y, z)` after removal of gravity
@@ -272,10 +272,10 @@ if imu.config(ACC) == cfg:
 
 #### Accelerometer (dev == ACC)
 
-`value` is a 2-tuple comprising `(range, bandwidth)`
-Allowable values:
-Range: 2, 4, 8, 16 (G).
-Bandwidth: 8, 16, 31, 62, 125, 250, 500, 1000 (Hz).
+`value` is a 2-tuple comprising `(range, bandwidth)`  
+Allowable values:  
+Range: 2, 4, 8, 16 (G).  
+Bandwidth: 8, 16, 31, 62, 125, 250, 500, 1000 (Hz).  
 The outcome of a change may be shown by means of the `.config(ACC)` method.
 ```python
 from bno055 import *
@@ -289,17 +289,17 @@ if imu.config(ACC) == cfg:
 
 #### Gyro (dev == GYRO)
 
-`value` is a 2-tuple comprising `(range, bandwidth)`
-Allowable values:
-Range: 125, 250, 500, 1000, 2000 (dps)
-Bandwidth: 12, 23, 32, 47, 64, 116, 230, 523 (Hz).
+`value` is a 2-tuple comprising `(range, bandwidth)`  
+Allowable values:  
+Range: 125, 250, 500, 1000, 2000 (dps)  
+Bandwidth: 12, 23, 32, 47, 64, 116, 230, 523 (Hz).  
 The outcome of a change may be shown by means of the `.config(GYRO)` method.
 
 #### Magnetometer (dev == MAG)
 
-`value` is a 1-tuple comprising `(rate,)` being the update rate in Hz.
-Allowable values:
-Rate: 2, 6, 8, 10, 15, 20, 25, 30 (Hz)
+`value` is a 1-tuple comprising `(rate,)` being the update rate in Hz.  
+Allowable values:  
+Rate: 2, 6, 8, 10, 15, 20, 25, 30 (Hz)  
 The outcome of a change may be shown by means of the `.config(MAG)` method.
 Note that on first call the prior config may be unknown and the method will
 return `False`. This is a chip behaviour.
@@ -469,6 +469,6 @@ while True:
 
 # 6. References
 
-[Adafruit BNO055 breakout](https://www.adafruit.com/product/2472)
-[Adafruit CircuitPython driver](https://github.com/adafruit/Adafruit_CircuitPython_BNO055.git).
-[Device datasheet](https://cdn-learn.adafruit.com/assets/assets/000/036/832/original/BST_BNO055_DS000_14.pdf)
+[Adafruit BNO055 breakout](https://www.adafruit.com/product/2472)  
+[Adafruit CircuitPython driver](https://github.com/adafruit/Adafruit_CircuitPython_BNO055.git).  
+[Device datasheet](https://cdn-learn.adafruit.com/assets/assets/000/036/832/original/BST_BNO055_DS000_14.pdf)  
