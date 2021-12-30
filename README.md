@@ -83,8 +83,8 @@ import time
 from bno055 import *
 # Pyboard hardware I2C
 i2c = machine.I2C(1)
-# ESP8266 soft I2C
-# i2c = machine.I2C(-1, scl=machine.Pin(2), sda=machine.Pin(0))
+# ESP32 and ESP8266 soft I2C
+# i2c = machine.SoftI2C(scl=machine.Pin(2), sda=machine.Pin(0), freq=100000, timeout=500)
 imu = BNO055(i2c)
 calibrated = False
 while True:
@@ -106,6 +106,13 @@ until calibration values for gyro, accel and mag are 3 and sys is >0.
 Note that if code is started automatically on power up (by a line in main.py) a
 delay of 500ms should be applied before instantiating the `BNO055`. This is to
 allow for the BNO055 chip startup time (400ms typical).
+
+When using soft I2C it seems necessary to increase the timeout to 500μs to
+avoid timeout errors - see
+[this issue](https://github.com/micropython-IMU/micropython-bno055/issues/4). I
+can find nothing in the datasheet on I2C timing, so the value of 500μs is
+empirical.
+
 
 ###### [Contents](./README.md#contents)
 
