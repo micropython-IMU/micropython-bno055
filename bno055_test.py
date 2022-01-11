@@ -6,10 +6,15 @@
 import machine
 import time
 from bno055 import *
+# Tested configurations
 # Pyboard hardware I2C
-i2c = machine.I2C(1)
+# i2c = machine.I2C(1)
+# Pico: hard I2C doesn't work, soft I2C works only at low baudrate.
+# i2c = machine.SoftI2C(sda=machine.Pin(16), scl=machine.Pin(17), freq=4_000)
 # ESP8266 soft I2C
-# i2c = machine.I2C(-1, scl=machine.Pin(2), sda=machine.Pin(0))
+# i2c = machine.SoftI2C(scl=machine.Pin(2), sda=machine.Pin(0))
+# ESP32 hard I2C
+# i2c = machine.I2C(1, scl=machine.Pin(21), sda=machine.Pin(23))
 imu = BNO055(i2c)
 calibrated = False
 while True:
