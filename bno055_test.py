@@ -9,10 +9,14 @@ from bno055 import *
 # Tested configurations
 # Pyboard hardware I2C
 # i2c = machine.I2C(1)
-# Pico: hard I2C doesn't work, soft I2C requires long timeout
-i2c = machine.SoftI2C(sda=machine.Pin(16), scl=machine.Pin(17), timeout=100_000)
+
+# Pico: hard I2C doesn't work.
+# i2c = machine.I2C(0, sda=machine.Pin(16), scl=machine.Pin(17))  # EIO error almost immediately
+
+# All platforms: soft I2C requires timeout >= 1000μs
+i2c = machine.SoftI2C(sda=machine.Pin(16), scl=machine.Pin(17), timeout=100_0000)
 # ESP8266 soft I2C
-# i2c = machine.SoftI2C(scl=machine.Pin(2), sda=machine.Pin(0))
+# i2c = machine.SoftI2C(scl=machine.Pin(2), sda=machine.Pin(0), timeout=100_000)
 # ESP32 hard I2C
 # i2c = machine.I2C(1, scl=machine.Pin(21), sda=machine.Pin(23))
 imu = BNO055(i2c)

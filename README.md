@@ -27,6 +27,9 @@ radically but heading remained essentially constant.
 
  1. [Files and dependencies](./README.md#1-files-and-dependencies)  
  2. [Getting started](./README.md#2-getting-started)  
+  2.1 [Pullups](./README.md#21-pullups)  
+  2.2 [Clock stretching](./README.md#22-clock-stretching)  
+  2.3 [Basic usage](./README.md#23-basic-usage)  
  3. [The BNO055 class](./README.md#3-the-bno055-class)  
   3.1 [Constructor](./README.md#31-constructor)  
   3.2 [Read only methods](./README.md#32-read-only-methods) Read data from device.  
@@ -69,13 +72,36 @@ The wiring below is for I2C(1) as used in the test program.
 | SCL X9  | SCL    |
 | SDA X10 | SDA    |
 
-Note that pullups (typically 10KΩ to 3.3V) are required on SCL and SDA. The
-Pyboard has these on `I2C(1)` and `I2C(2)`, as does the Adafruit BNO055
-breakout. ESP8266 boards have pullups on pins 0 and 2. External pullups will
-therefore only be required if using a non-Adafruit breakout with MicroPython
-board pins lacking pullups.
+## 2.1 Pullups
 
-Basic usage is as follows:
+Pullups (resistors connected to 3.3V) are required on SCL and SDA. The Pyboard
+has these on `I2C(1)` and `I2C(2)`, as does the Adafruit BNO055 breakout.
+ESP8266 boards have pullups on pins 0 and 2. Pyboard 1.1 pullups are 4.7KΩ,
+those on the Adafruit board are 10KΩ. The Raspberry Pico lacks pullups as do
+most ESP32 breakout boards.
+
+I encountered problems with the Pico and the Adafruit board: waveforms had slow
+risetimes and invalid data occurred at times. This was solved by adding 1KΩ
+resistors, with waveforms showing clean edges.
+
+As a general comment, my first port of call in the event of any problem would
+be to add 1KΩ resistors.
+
+## 2.2 Clock stretching
+
+See [this issue](https://github.com/micropython-IMU/micropython-bno055/issues/4)
+and [this forum thread](https://forum.micropython.org/viewtopic.php?f=21&t=11745).
+
+The BNO055 hardware performs I2C clock stretching. I have found no
+documentation of this, but measurement suggests a maximum of about 500μs. This
+has the following consequences:
+ 1. Hard I2C on the RP2 (Raspberry Pico) does not work.
+ 2. Soft I2C on any platform requires a `timeout` value in the SoftI2C
+ constructor call - see below.
+
+Hard I2C works on Pyboard and ESP32.
+
+## 2.3 Basic usage
 
 ```python
 import machine
@@ -84,7 +110,7 @@ from bno055 import *
 # Pyboard hardware I2C
 i2c = machine.I2C(1)
 # ESP32 and ESP8266 soft I2C
-# i2c = machine.SoftI2C(scl=machine.Pin(2), sda=machine.Pin(0), freq=100000, timeout=500)
+# i2c = machine.SoftI2C(scl=machine.Pin(2), sda=machine.Pin(0), timeout=100_000)
 imu = BNO055(i2c)
 calibrated = False
 while True:
@@ -106,13 +132,6 @@ until calibration values for gyro, accel and mag are 3 and sys is >0.
 Note that if code is started automatically on power up (by a line in main.py) a
 delay of 500ms should be applied before instantiating the `BNO055`. This is to
 allow for the BNO055 chip startup time (400ms typical).
-
-When using soft I2C it seems necessary to increase the timeout to 500μs to
-avoid timeout errors - see
-[this issue](https://github.com/micropython-IMU/micropython-bno055/issues/4). I
-can find nothing in the datasheet on I2C timing, so the value of 500μs is
-empirical.
-
 
 ###### [Contents](./README.md#contents)
 
