@@ -29,7 +29,8 @@ radically but heading remained essentially constant.
  2. [Getting started](./README.md#2-getting-started)  
   2.1 [Pullups](./README.md#21-pullups)  
   2.2 [Clock stretching](./README.md#22-clock-stretching)  
-  2.3 [Basic usage](./README.md#23-basic-usage)  
+  2.3 [Pico issue](./README.md#23-pico-issue)  
+  2.4 [Basic usage](./README.md#23-basic-usage)  
  3. [The BNO055 class](./README.md#3-the-bno055-class)  
   3.1 [Constructor](./README.md#31-constructor)  
   3.2 [Read only methods](./README.md#32-read-only-methods) Read data from device.  
@@ -89,19 +90,22 @@ be to add 1KΩ resistors.
 
 ## 2.2 Clock stretching
 
-See [this issue](https://github.com/micropython-IMU/micropython-bno055/issues/4)
-and [this forum thread](https://forum.micropython.org/viewtopic.php?f=21&t=11745).
+See [this issue](https://github.com/micropython-IMU/micropython-bno055/issues/4).
 
 The BNO055 hardware performs I2C clock stretching. I have found no
-documentation of this, but measurement suggests a maximum of about 500μs. This
-has the following consequences:
- 1. Hard I2C on the RP2 (Raspberry Pico) does not work.
- 2. Soft I2C on any platform requires a `timeout` value in the SoftI2C
- constructor call - see below.
+documentation of this, but measurement suggests a maximum of about 500μs. The
+default timeout on Soft I2C is 255μs: it is therefore necessary to specify a
+`timeout` value in the SoftI2C constructor call - see below.
 
-Hard I2C works on Pyboard and ESP32.
+## 2.3 Pico Issue
 
-## 2.3 Basic usage
+See [this forum thread](https://forum.micropython.org/viewtopic.php?f=21&t=11745).
+
+Currently (Jan 2022, V1.17) Hard I2C does not work on the RP2 because of
+[this issue](https://github.com/micropython/micropython/issues/8167#issuecomment-1013696765).
+Options are to compile with this patch or use soft I2C.
+
+## 2.4 Basic usage
 
 ```python
 import machine
