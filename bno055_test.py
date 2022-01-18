@@ -12,10 +12,10 @@ from bno055 import *
 
 # Pico: hard I2C doesn't work without this patch
 # https://github.com/micropython/micropython/issues/8167#issuecomment-1013696765
-# i2c = machine.I2C(0, sda=machine.Pin(16), scl=machine.Pin(17), freq=100_000)  # EIO error almost immediately
+i2c = machine.I2C(0, sda=machine.Pin(16), scl=machine.Pin(17))  # EIO error almost immediately
 
 # All platforms: soft I2C requires timeout >= 1000μs
-i2c = machine.SoftI2C(sda=machine.Pin(16), scl=machine.Pin(17), timeout=100_0000)
+# i2c = machine.SoftI2C(sda=machine.Pin(16), scl=machine.Pin(17), timeout=1_000)
 # ESP8266 soft I2C
 # i2c = machine.SoftI2C(scl=machine.Pin(2), sda=machine.Pin(0), timeout=100_000)
 # ESP32 hard I2C
