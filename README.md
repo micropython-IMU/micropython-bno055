@@ -99,11 +99,14 @@ default timeout on Soft I2C is 255μs: it is therefore necessary to specify a
 
 ## 2.3 Pico Issue
 
-See [this forum thread](https://forum.micropython.org/viewtopic.php?f=21&t=11745).
+Firmware problems with I2C on the Pico have now been fixed. Please use a daily
+build or release build later than 1.18. Running I2C at the 400KHz default can
+be unreliable if the I2C pullup resistors are too high. Options are to reduce
+speed (Adafruit use 100KHz) or to add 1KΩ resistors from SDA and SCL to 3.3V.
 
-Currently (Jan 2022, V1.17) Hard I2C does not work on the RP2 because of
+Refs: [this forum thread](https://forum.micropython.org/viewtopic.php?f=21&t=11745)
+and
 [this issue](https://github.com/micropython/micropython/issues/8167#issuecomment-1013696765).
-Options are to compile with this patch or use soft I2C.
 
 ## 2.4 Basic usage
 
