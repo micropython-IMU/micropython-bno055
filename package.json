@@ -1,8 +1,8 @@
 {
   "urls": [
-    ["bno055_base.py", "github:peterhinch/micropython-bno055/bno055_base.py"],
-    ["bno055_test.py", "github:peterhinch/micropython-bno055/bno055_test.py"],
-    ["bno055.py", "github:peterhinch/micropython-bno055/bno055.py"]
+    ["bno055_base.py", "github:micropython-IMU/micropython-bno055/bno055_base.py"],
+    ["bno055_test.py", "github:micropython-IMU/micropython-bno055/bno055_test.py"],
+    ["bno055.py", "github:micropython-IMU/micropython-bno055/bno055.py"]
   ],
   "version": "0.1"
 }

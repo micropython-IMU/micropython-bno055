@@ -52,7 +52,7 @@ radically but heading remained essentially constant.
 
  The files may be installed on target hardware with `mpremote`:
  ```bash
- $ mpremote mip install github:peterhinch/micropython-bno055
+ $ mpremote mip install github:micropython-IMU/micropython-bno055
  ```
 The driver has no dependencies. It is designed to be imported using
 ```python
