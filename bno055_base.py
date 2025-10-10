@@ -34,20 +34,20 @@ import utime as time
 import ustruct
 from micropython import const
 
-_CHIP_ID = const(0xa0)
+_CHIP_ID = const(0xA0)
 
 _CONFIG_MODE = const(0)
-_NDOF_MODE = const(0x0c)
+_NDOF_MODE = const(0x0C)
 
 _POWER_NORMAL = const(0x00)
 _POWER_LOW = const(0x01)
 _POWER_SUSPEND = const(0x02)
 
-_MODE_REGISTER = const(0x3d)
+_MODE_REGISTER = const(0x3D)
 _PAGE_REGISTER = const(0x07)
 _CALIBRATION_REGISTER = const(0x35)
-_TRIGGER_REGISTER = const(0x3f)
-_POWER_REGISTER = const(0x3e)
+_TRIGGER_REGISTER = const(0x3F)
+_POWER_REGISTER = const(0x3E)
 _ID_REGISTER = const(0x00)
 
 ACCEL_OFFSET_X_LSB_ADDR = const(0x55)
@@ -76,24 +76,26 @@ ACCEL_RADIUS_MSB_ADDR = const(0x68)
 MAG_RADIUS_LSB_ADDR = const(0x69)
 MAG_RADIUS_MSB_ADDR = const(0x6A)
 
-class BNO055_BASE:
 
+class BNO055_BASE:
     def __init__(self, i2c, address=0x28, crystal=True, transpose=(0, 1, 2), sign=(0, 0, 0)):
         self._i2c = i2c
         self.address = address
         self.crystal = crystal
-        self.mag = lambda : self.scaled_tuple(0x0e, 1/16)  # microteslas (x, y, z)
-        self.accel = lambda : self.scaled_tuple(0x08, 1/100)  # m.s^-2
-        self.lin_acc = lambda : self.scaled_tuple(0x28, 1/100)  # m.s^-2
-        self.gravity = lambda : self.scaled_tuple(0x2e, 1/100)  # m.s^-2
-        self.gyro = lambda : self.scaled_tuple(0x14, 1/16)  # deg.s^-1
-        self.euler = lambda : self.scaled_tuple(0x1a, 1/16)  # degrees (heading, roll, pitch)
-        self.quaternion = lambda : self.scaled_tuple(0x20, 1/(1<<14), bytearray(8), '<hhhh')  # (w, x, y, z)
+        self.mag = lambda: self.scaled_tuple(0x0E, 1 / 16)  # microteslas (x, y, z)
+        self.accel = lambda: self.scaled_tuple(0x08, 1 / 100)  # m.s^-2
+        self.lin_acc = lambda: self.scaled_tuple(0x28, 1 / 100)  # m.s^-2
+        self.gravity = lambda: self.scaled_tuple(0x2E, 1 / 100)  # m.s^-2
+        self.gyro = lambda: self.scaled_tuple(0x14, 1 / 16)  # deg.s^-1
+        self.euler = lambda: self.scaled_tuple(0x1A, 1 / 16)  # degrees (heading, roll, pitch)
+        self.quaternion = lambda: self.scaled_tuple(
+            0x20, 1 / (1 << 14), bytearray(8), "<hhhh"
+        )  # (w, x, y, z)
         self._mode = _CONFIG_MODE
         try:
             chip_id = self._read(_ID_REGISTER)
         except OSError:
-            raise RuntimeError('No BNO055 chip detected.')
+            raise RuntimeError("No BNO055 chip detected.")
         if chip_id != _CHIP_ID:
             raise RuntimeError("bad chip id (%x != %x)" % (chip_id, _CHIP_ID))
         self.reset()
@@ -102,7 +104,7 @@ class BNO055_BASE:
         self.mode(_CONFIG_MODE)
         try:
             self._write(_TRIGGER_REGISTER, 0x20)
-        except OSError: # error due to the chip resetting
+        except OSError:  # error due to the chip resetting
             pass
         # wait for the chip to reset (650 ms typ.)
         time.sleep_ms(700)
@@ -110,12 +112,12 @@ class BNO055_BASE:
         self._write(_PAGE_REGISTER, 0x00)
         self._write(_TRIGGER_REGISTER, 0x80 if self.crystal else 0)
         time.sleep_ms(500 if self.crystal else 10)  # Crystal osc seems to take time to start.
-        if hasattr(self, 'orient'):
+        if hasattr(self, "orient"):
             self.orient()  # Subclass
         self.mode(_NDOF_MODE)
 
-    def scaled_tuple(self, addr, scale, buf=bytearray(6), fmt='<hhh'):
-        return tuple(b*scale for b in ustruct.unpack(fmt, self._readn(buf, addr)))
+    def scaled_tuple(self, addr, scale, buf=bytearray(6), fmt="<hhh"):
+        return tuple(b * scale for b in ustruct.unpack(fmt, self._readn(buf, addr)))
 
     def temperature(self):
         t = self._read(0x34)  # Celcius signed (corrected from Adafruit)
@@ -150,10 +152,10 @@ class BNO055_BASE:
 
         time.sleep_ms(25)
 
-        '''Note: Configuration will take place only when user writes to the last
+        """Note: Configuration will take place only when user writes to the last
             byte of each config data pair (ex. ACCEL_OFFSET_Z_MSB_ADDR, etc.).
             Therefore the last byte must be written whenever the user wants to
-            changes the configuration.'''
+            changes the configuration."""
 
         self._write(ACCEL_OFFSET_X_LSB_ADDR, buf[0])
         self._write(ACCEL_OFFSET_X_MSB_ADDR, buf[1])
@@ -184,7 +186,6 @@ class BNO055_BASE:
 
         self.mode(lastMode)
 
-
     # read byte from register, return int
     def _read(self, memaddr, buf=bytearray(1)):  # memaddr = memory location within the I2C device
         self._i2c.readfrom_mem_into(self.address, memaddr, buf)
@@ -203,13 +204,15 @@ class BNO055_BASE:
     def mode(self, new_mode=None):
         old_mode = self._read(_MODE_REGISTER)
         if new_mode is not None:
-            self._write(_MODE_REGISTER, _CONFIG_MODE)  # This is empirically necessary if the mode is to be changed
+            self._write(
+                _MODE_REGISTER, _CONFIG_MODE
+            )  # This is empirically necessary if the mode is to be changed
             time.sleep_ms(20)  # Datasheet table 3.6
             if new_mode != _CONFIG_MODE:
                 self._write(_MODE_REGISTER, new_mode)
                 time.sleep_ms(10)  # Table 3.6
 
-        self._mode = new_mode
+        self._mode = old_mode if new_mode is None else new_mode
         return old_mode
 
     def external_crystal(self):

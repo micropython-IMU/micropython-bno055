@@ -50,6 +50,10 @@ radically but heading remained essentially constant.
  * `bno055_test.py` Simple test program. Can run on Pyboard or (with pin
  changes) ESP8266: see code comments.
 
+ The files may be installed on target hardware with `mpremote`:
+ ```bash
+ $ mpremote mip install github:peterhinch/micropython-bno055
+ ```
 The driver has no dependencies. It is designed to be imported using
 ```python
 from bno055 import *
