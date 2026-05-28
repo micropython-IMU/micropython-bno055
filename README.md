@@ -42,6 +42,8 @@ radically but heading remained essentially constant.
  4. [Calibration](./README.md#4-calibration)  
  5. [Minimal version](./README.md#5-minimal-version) Minimise RAM usage.  
  6. [References](./README.md#6-references)  
+ 7. [The BNO085](./README.md#7-the-bno085) Notes on, and a driver for, this chip.  
+
 
 # 1. Files and dependencies
 
@@ -509,3 +511,17 @@ while True:
 [Adafruit BNO055 breakout](https://www.adafruit.com/product/2472)  
 [Adafruit CircuitPython driver](https://github.com/adafruit/Adafruit_CircuitPython_BNO055.git).  
 [Device datasheet](https://cdn-learn.adafruit.com/assets/assets/000/036/832/original/BST_BNO055_DS000_14.pdf)  
+
+# 7. The BNO085
+
+The BNO08x series have a message-based API necessitating a much larger driver.
+The chip has clearly been designed for smartphones which have abundant resources.
+Benefits include activity classification (cycling, walking etc.): see the
+[CircuitPython driver docs](https://docs.circuitpython.org/projects/bno08x/en/latest/api.html).
+A [MicroPython driver](https://github.com/bradcar/bno08x_i2c_spi_MicroPython/tree/main)
+written by @bradcar is available.
+
+[Adafruit BNO085 breakout](https://www.adafruit.com/product/4754).
+
+The Bosch BNO055 chip is still available (as of May 2026): its simple, low latency,
+register-based API may be preferred for many microcontroller applications.
